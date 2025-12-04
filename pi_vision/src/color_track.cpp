@@ -23,16 +23,15 @@ int main() {
 
         char key = cv::waitKey(1);
 
-/*chat code for mode switching 
-        // ---- MODE SWITCHING ----
-        if (key == '1') mode = 1;   // idle
-        if (key == '2') mode = 2;   // tracking
-        if (key == '3') mode = 3;   // patrol
+
+//DISABDLED chat gpt code for now
+        // MODE SWITCHING - chat code - disabeled for now
+        /*
+        if (key == '1') mode = 1;
+        if (key == '2') mode = 2;
+        if (key == '3') mode = 3;
         if (key == 'q') break;
 
-        // --------------------------------------------------
-        // MODE 1: IDLE (just show live feed, nothing else)
-        // --------------------------------------------------
         if (mode == 1) {
             cv::putText(display, "MODE: IDLE",
                         cv::Point(20,40),
@@ -42,15 +41,17 @@ int main() {
             cv::imshow("Camera Feed + Tracking", display);
             continue;
         }
-*/
-        // MODE 2: COLOR TRACKING 
+        */
+
+        //working color mode rn 
         if (mode == 2) {
+
+            bool targetFound = false;   //new to display found/searchin g
 
             cv::Mat hsv, mask;
             cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
 
-            //strict green - 2 much bad input
-            // Expanded green detection , darker and brither
+            // more green detection , for dark and light too
             cv::Scalar lower_green(30, 40, 20);
             cv::Scalar upper_green(90, 255, 255);
             cv::inRange(hsv, lower_green, upper_green, mask);
@@ -73,24 +74,26 @@ int main() {
                 }
             }
 
+            //target found []
             if (bestIndex != -1) {
+
+                targetFound = true; 
+
                 cv::Rect box = cv::boundingRect(contours[bestIndex]);
                 cv::rectangle(display, box, cv::Scalar(0, 255, 0), 2);
 
                 int cx = box.x + box.width / 2;
                 int cy = box.y + box.height / 2;
 
-                // crosshair no dot
+                //crosshair
                 int size = 20;
 
-                // Horizontal for crosshair
                 cv::line(display,
                          cv::Point(cx - size, cy),
                          cv::Point(cx + size, cy),
                          cv::Scalar(0, 0, 255),
                          2);
 
-                // Vertical line for crosshair
                 cv::line(display,
                          cv::Point(cx, cy - size),
                          cv::Point(cx, cy + size),
@@ -99,7 +102,7 @@ int main() {
 
                 std::cout << "Center of object (green): (" << cx << ", " << cy << ")\n";
 
-                // Create a blank img for minimap 
+                //  minimap 
                 cv::Mat mini = cv::Mat::zeros(150, 150, CV_8UC3);
 
                 cv::rectangle(mini,
@@ -108,7 +111,6 @@ int main() {
                               cv::Scalar(0, 255, 0),
                               2);
 
-                //position into mini map coordinates
                 int miniX = (cx * mini.cols) / frame.cols;
                 int miniY = (cy * mini.rows) / frame.rows;
 
@@ -118,14 +120,28 @@ int main() {
                            cv::Scalar(0, 0, 255),
                            -1);
 
-                //minimap , SEPARATE window
                 cv::imshow("Mini Map", mini);
             }
 
+            //text display output for target found/searching - on main camera feed 
+            if (targetFound) {
+                cv::putText(display, "TARGET ACQUIRED",
+                            cv::Point(20, 80),
+                            cv::FONT_HERSHEY_SIMPLEX, 1.0,
+                            cv::Scalar(0, 255, 0), 3);
+            } else {
+                cv::putText(display, "SEARCHING...",
+                            cv::Point(20, 80),
+                            cv::FONT_HERSHEY_SIMPLEX, 1.0,
+                            cv::Scalar(0, 0, 255), 3);
+            }
+
+         //display of mode - will be used also w additional modes
             cv::putText(display, "MODE: COLOR TRACK",
                         cv::Point(20,40),
                         cv::FONT_HERSHEY_SIMPLEX, 1.0,
                         cv::Scalar(0,255,0), 2);
+
 
             cv::imshow("Camera Feed + Tracking", display);
             cv::imshow("Green Mask", mask);
@@ -133,47 +149,44 @@ int main() {
             continue;
         }
 
-/*
-       // --------------------------------------------------
-// MODE 3: PATROL — REAL SWEEP ANIMATION
-// --------------------------------------------------
-if (mode == 3) {
+        //disabled for now - chat code
+        // --------------------------------------
+        // MODE 3: PATROL 
+        // --------------------------------------
+        /*
+        if (mode == 3) {
+            cv::putText(display, "MODE: PATROL SWEEP",
+                        cv::Point(20,40),
+                        cv::FONT_HERSHEY_SIMPLEX, 1.0,
+                        cv::Scalar(255,0,0), 2);
 
-    cv::putText(display, "MODE: PATROL SWEEP",
-                cv::Point(20,40),
-                cv::FONT_HERSHEY_SIMPLEX, 1.0,
-                cv::Scalar(255,0,0), 2);
+            sweepPos += sweepDir * 5;
 
-    // smooth scan line moving horizontally
-    sweepPos += sweepDir * 5; // speed
+            if (sweepPos >= display.cols - 1) sweepDir = -1;
+            if (sweepPos <= 0) sweepDir = 1;
 
-    if (sweepPos >= display.cols - 1) sweepDir = -1;
-    if (sweepPos <= 0) sweepDir = 1;
+            cv::line(display,
+                     cv::Point(sweepPos, 0),
+                     cv::Point(sweepPos, display.rows),
+                     cv::Scalar(255, 0, 0), 2);
 
-    // draw vertical sweep line
-    cv::line(display,
-             cv::Point(sweepPos, 0),
-             cv::Point(sweepPos, display.rows),
-             cv::Scalar(255, 0, 0),
-             2);
+            int centerY = display.rows / 2;
+            int coneWidth = 200;
 
-    // OPTIONAL: draw fake radar cone (FOV shape)
-    int centerY = display.rows / 2;
-    int coneWidth = 200;
+            cv::line(display,
+                     cv::Point(sweepPos, centerY),
+                     cv::Point(sweepPos + coneWidth * sweepDir, centerY - 150),
+                     cv::Scalar(255, 0, 0), 2);
 
-    cv::line(display,
-             cv::Point(sweepPos, centerY),
-             cv::Point(sweepPos + coneWidth * sweepDir, centerY - 150),
-             cv::Scalar(255, 0, 0), 2);
+            cv::line(display,
+                     cv::Point(sweepPos, centerY),
+                     cv::Point(sweepPos + coneWidth * sweepDir, centerY + 150),
+                     cv::Scalar(255, 0, 0), 2);
 
-    cv::line(display,
-             cv::Point(sweepPos, centerY),
-             cv::Point(sweepPos + coneWidth * sweepDir, centerY + 150),
-             cv::Scalar(255, 0, 0), 2);
-
-    cv::imshow("Camera Feed + Tracking", display);
-    continue;
-} */
+            cv::imshow("Camera Feed + Tracking", display);
+            continue;
+        }
+        */
 
     }
 
